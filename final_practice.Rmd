@@ -1,0 +1,123 @@
+---
+title: "Cars Consumption Analysis"
+author: "Pedro A. Alonso Baigorri"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## 1 - Executive Summary
+
+The purpose of this analysis is exploring the relationship between a set of variables and miles per gallon (MPG) (outcome) in the mtcars dataset included in R Studio. On this sense the objective is to answer the following two questions:
+
+* "Is an automatic or manual transmission better for MPG"
+* "Quantify the MPG difference between automatic and manual transmissions"
+
+Regression Modelling techniques are used to perform this analysis.
+
+## 2 - Exploratory Data Analysis
+
+With the following r Code I can see the main variables of the dataset.
+
+```{r}
+data(mtcars)
+head(mtcars, 1)
+```
+The outcome of this analysis is the variable mtcars$mpg (Miles per Gallon). Higher values
+of this variable means lower fuel consumption.
+
+In the annex can be found a plot showing that there is a main dependence of the consumption depending on the transmission type.
+Cars with automatic transmission in general consumes more than manual transmission. Other plots with the analysis of the rest of variables can be found also in the annex.
+
+## 3 - Model selection
+
+Now I wil fit a regression model to quantify the impact of Transmission in the consumption but linked also with the rest
+of the variables. First of all I'll try a single model using only am as a regressor since it's thekey variable for this analysis
+
+```{r}
+fit0 <- lm(mpg ~ factor(am), data = mtcars)
+summary(fit0)$coefficients
+summary(fit0)$r.squared 
+```
+As a result we can see that the P-Values are very small, so it means that the relation between mpg and am is very relevant. 
+However, the Adjusted R-Squared is very low, meaning that this model only explains the `r round(summary(fit0)$r.squared * 100, 2)` % of the variance of the dataset.I will create two more models adding more variables grouping them according to the correlation index.
+
+```{r}
+cor(mtcars)[-1, 1]
+```
+So for the second model I will use the variables with a corr index > 0.7 (cyl, disp, wt, hp), 
+and for the third model the ones between 0.5 - 0.7 (drat, vs, carb). And then I will  use the nested modelling technique to analyze what models to use.
+
+```{r}
+fit0 <- lm(mpg ~ factor(am), data = mtcars)
+fit1 <- lm(mpg ~ factor(am) + cyl + disp + wt + hp, data = mtcars)
+fit2 <- lm(mpg ~ factor(am) + cyl + disp + wt + drat + vs + carb, data = mtcars)
+anova(fit0, fit1, fit2)
+```
+According to this the P-Value for the fit1 model is very low so we keep this model, however the fit2 is not necessary to include it. So the statistics for the final model are:
+
+```{r}
+summary(fit1)$coefficients
+```
+And in this case we have a good Adjusted R-Squared: `r round(summary(fit1)$r.squared * 100, 2)`. The 2nd coef gives the increase in MPG for Manual transmission.
+
+## 4 - Model Residuals
+
+In the annex can be found a figure with the residuals obtained with this model.According to this figure the residuals are very distributed across all the variability of the prediction.
+
+## 5 - Conclusions
+
+After this analysis we can conclude that:
+
+* There is a relationship between Transmission and Consumption: Manual transmission is better for MPG (MPG bigger means fuel consumption higher) 
+
+* We can quantify the difference as an estimation: According to our model cars with manual transmission have a `r fit1$coef[2]` Miles per Gallon more than cars with automatic transmission.
+
+# Annexes
+
+## A1 - Figures of data exploration
+
+
+```{r echo = FALSE, fig.width=8 , fig.height=4}
+par(mfrow=c(1,2))
+boxplot(mpg ~ am, data = mtcars, main = "Miles per Gallon Vs Transmission "
+        , xlab = "Transmission (0-auto, 1-manual)",  ylab = "MPG")
+```
+
+```{r echo = FALSE, fig.width=8 , fig.height=4}
+par(mfrow=c(1,2))
+boxplot(mpg ~ cyl, data = mtcars, main = "Miles per Gallon Vs Number of Cylinders "
+        , xlab = "Cylinders",  ylab = "MPG")
+boxplot(mpg ~ vs, data = mtcars, main = "Miles per Gallon Vs Engine type "
+        , xlab = "Engine (0-V enginge, 1-S engine)",  ylab = "MPG")
+boxplot(mpg ~ gear, data = mtcars, main = "Miles per Gallon Vs Number of Gears "
+        , xlab = "Number of Gears",  ylab = "MPG")
+boxplot(mpg ~ carb, data = mtcars, main = "Miles per Gallon Vs Number of Carburetors "
+        , xlab = "Number of Carburetors",  ylab = "MPG")
+```
+
+```{r echo = FALSE, fig.width=8 , fig.height=4}
+par(mfrow=c(1,2))
+plot(mtcars$disp, mtcars$mpg, main = "Miles per Gallon Vs Gas Displacement "
+     , xlab = "Displacement (cu.in.)",  ylab = "MPG")
+plot(mtcars$hp, mtcars$mpg, main = "Miles per Gallon Vs Gross Horsepower "
+     , xlab = "Horsepower",  ylab = "MPG")
+plot(mtcars$drat, mtcars$mpg, main = "Miles per Gallon Vs Rear Axle Ratio "
+     , xlab = "Rear Axle Ratio",  ylab = "MPG")
+plot(mtcars$wt, mtcars$mpg, main = "Miles per Gallon Vs Weight "
+     , xlab = "Weight (1000 lbs)",  ylab = "MPG")
+```
+
+## A2 - Residuals plot
+
+```{r echo = FALSE, fig.width=8 , fig.height=4}
+residuals <- resid(fit1)
+predicted <- predict(fit1)
+plot(predicted, residuals, main ="Residuals Vs Predicted")
+
+```
+
+
+
